@@ -1,8 +1,9 @@
 const restaurantsController = require('../controllers/restaurants.controllers');
 
 // middlewares
+const restaurantsMiddleware = require('../middlewares/restaurants.middleware');
 const validationsMiddleware = require('../middlewares/validations.middleware');
-const autMiddleware = require('../middlewares/auth.middleware');
+const authMiddleware = require('../middlewares/auth.middleware');
 
 const { Router } = require('express');
 const router = Router();
@@ -11,29 +12,51 @@ router
   .route('/')
   .get(restaurantsController.findRestaurants)
   .post(
-    autMiddleware.protect,
+    authMiddleware.protect,
+    authMiddleware.restrictTo('admin'),
     validationsMiddleware.createRestaurantValidation,
     restaurantsController.createNewRestaurant
   );
 
 router
   .route('/reviews/:restaurantId/:id')
-  .patch(autMiddleware.protect, restaurantsController.updateReviewOfRestaurant)
+  .patch(
+    authMiddleware.protect,
+    authMiddleware.protectAccountOwnerByReview,
+    validationsMiddleware.reviewValidation,
+    restaurantsMiddleware.validReview,
+    restaurantsController.updateReview
+  )
   .delete(
-    autMiddleware.protect,
-    restaurantsController.deleteReviewOfRestaurant
+    authMiddleware.protect,
+    authMiddleware.protectAccountOwnerByReview,
+    restaurantsMiddleware.validReview,
+    restaurantsController.deleteReview
   );
 
 router.post(
   '/reviews/:id',
-  autMiddleware.protect,
+  authMiddleware.protect,
+  validationsMiddleware.reviewValidation,
+  restaurantsMiddleware.validRestaurant,
   restaurantsController.createNewReview
 );
+
+router.use('/:id', restaurantsMiddleware.validRestaurant);
 
 router
   .route('/:id')
   .get(restaurantsController.findRestaurantById)
-  .patch(autMiddleware.protect, restaurantsController.updateRestaurant)
-  .delete(autMiddleware.protect, restaurantsController.deleteRestaurant);
+  .patch(
+    authMiddleware.protect,
+    authMiddleware.restrictTo('admin'),
+    validationsMiddleware.updateRestaurantValidation,
+    restaurantsController.updateRestaurant
+  )
+  .delete(
+    authMiddleware.protect,
+    authMiddleware.restrictTo('admin'),
+    restaurantsController.deleteRestaurant
+  );
 
 module.exports = router;

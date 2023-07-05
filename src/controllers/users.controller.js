@@ -7,13 +7,13 @@ const AppError = require('../utils/appError');
 exports.signup = catchAsync(async (req, res, next) => {
   const { name, email, password, role } = req.body;
 
-  const existentUser = await Users.findOne({
+  const userInDb = await Users.findOne({
     where: {
       email,
     },
   });
 
-  if (existentUser) {
+  if (userInDb) {
     return res.status(404).json({
       status: 'error',
       message: `There is already a user created in the database with the email: ${email}`,
@@ -47,7 +47,7 @@ exports.login = catchAsync(async (req, res, next) => {
   const user = await Users.findOne({
     where: {
       email: email.toLowerCase(),
-      status: 'available',
+      status: 'active',
     },
   });
 
@@ -94,9 +94,9 @@ exports.findOneOrderById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { user } = req;
 
-  const filteredOrder = user.orders.filter((order) => order.id === id);
+  const filteredOrder = user.orders.filter((order) => order.id === +id);
 
-  if (!filteredOrder) {
+  if (filteredOrder.length === 0) {
     return next(new AppError(`The order with id:${id} does not exist`));
   }
 
@@ -120,6 +120,10 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: `The user with id:${user.id} was updated`,
+    user: {
+      name,
+      email,
+    },
   });
 });
 
